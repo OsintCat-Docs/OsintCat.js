@@ -1,0 +1,6 @@
+{
+  "success": true,
+  "data": {
+    "google.com": "142.251.40.238"
+  }
+}

@@ -1,0 +1,21 @@
+# Source files
+src/
+__tests__/
+examples/
+
+# Build configuration
+tsconfig.json
+jest.config.js
+
+# Development files
+.gitignore
+.eslintrc*
+.prettierrc*
+
+# Documentation (keeping README.md)
+docs/
+
+# Testing
+coverage/
+*.test.ts
+*.test.js
