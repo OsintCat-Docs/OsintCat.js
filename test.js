@@ -4,7 +4,7 @@ const OsintCat = require('./lib/index.js'); // Use local build, not npm package
 async function testAPI() {
     console.log('🧪 Testing OsintCat API...');
 
-    const client = new OsintCat({ apiKey: '9473-3313-8886' });
+    const client = new OsintCat({ apiKey: '9473-3313-8886' }); // ← Put your real key here - just a dummy key
 
     try {
         // Test user info first (usually free)

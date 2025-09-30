@@ -962,15 +962,21 @@ export class OsintCat {
   }
 
   async searchMinecraft(
-    usernameOrUuid: string
-  ): Promise<OsintResponse<MinecraftResult>> {
+  /**
+   * Search for Minecraft account breaches
+   * 
+   * @param usernameOrUuid - Minecraft username or UUID
+   * @returns Minecraft breach data
+   * @throws {OsintCatError} If request fails
+   */
+  async searchMinecraft(usernameOrUuid: string): Promise<OsintResponse<MinecraftResult>> {
+    if (!usernameOrUuid || usernameOrUuid.trim().length === 0) {
+      throw new OsintCatError("Username or UUID cannot be empty");
+    }
     return this.makeRequest<MinecraftResult>("/api/minecraft", {
-      query: usernameOrUuid,
+      query: usernameOrUuid.trim(),
     });
   }
 }
 
 export default OsintCat;
-module.exports = OsintCat;
-module.exports.default = OsintCat;
-module.exports.OsintCat = OsintCat;

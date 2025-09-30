@@ -103,7 +103,7 @@ const ip = await client.getIPInfo('192.168.1.1');
 ```
 
 #### DNS Resolution
-```
+```js
 const dns = await client.resolveDNS('example.com');
 ```
 

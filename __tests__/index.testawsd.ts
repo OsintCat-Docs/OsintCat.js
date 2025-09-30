@@ -40,7 +40,6 @@ describe('OsintCat', () => {
         test('should initialize with custom config', () => {
             const customClient = new OsintCat({
                 apiKey: 'custom-key',
-                baseURL: 'https://www.osintcat.net',
                 timeout: 90000
             });
 

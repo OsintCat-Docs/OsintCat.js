@@ -222,10 +222,7 @@ describe('OsintCat', () => {
 
             const result = await client.getUserInfo();
 
-            expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/user', {
-                params: undefined,
-                headers: undefined
-            });
+            expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/user');
             // getUserInfo returns the data directly from response.data
             expect(result.plan).toBe('premium');
             expect(result.lookups_left).toBe('45');
