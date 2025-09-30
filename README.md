@@ -147,8 +147,7 @@ const conversion = await client.discordToRoblox('discord_user_id');
 ```js
 const client = new OsintCat({
     apiKey: 'your-api-key',
-    baseURL: 'https://www.osintcat.net', // Optional: custom base URL
-    timeout: 30000 // Optional: request timeout in milliseconds (default: 30s)
+    timeout: 90000 // Optional: request timeout in milliseconds (default: 90s)
 });
 ```
 

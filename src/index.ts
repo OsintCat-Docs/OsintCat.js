@@ -2,7 +2,6 @@ import axios, { AxiosInstance, AxiosResponse, AxiosError } from "axios";
 
 export interface OsintCatConfig {
   readonly apiKey: string;
-  readonly baseURL?: string;
   readonly timeout?: number;
   readonly customHeaders?: Record<string, string>;
 }
@@ -452,7 +451,7 @@ export interface NPDEntry {
   readonly ssn?: string;
   readonly dob?: string | null;
   readonly source_name?: string;
-  readonly [key: string]: string | number | null | undefined;
+  readonly [key: string]: string | number | null | undefined | boolean | unknown;
 }
 
 export interface NPDSearchParams {
@@ -466,6 +465,7 @@ export interface NPDSearchParams {
   readonly dob?: string;
   readonly phone1?: string;
   readonly sources?: string;
+  readonly [key: string]: string | number | null | undefined | boolean | unknown;
 }
 
 export interface DomainResult {
@@ -826,22 +826,53 @@ export class OsintCatError extends Error {
   ) {
     super(message);
     this.name = "OsintCatError";
+    
+    // Maintains proper stack trace for where error was thrown (V8 engines only)
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, OsintCatError);
+    }
   }
 }
 
+/**
+ * OsintCat API Client
+ * 
+ * Official JavaScript/TypeScript client for the OsintCat API.
+ * Provides comprehensive OSINT investigation tools.
+ * 
+ * @example
+ * ```typescript
+ * const client = new OsintCat({ apiKey: 'your-api-key' });
+ * const breaches = await client.searchBreaches('email@example.com');
+ * ```
+ */
 export class OsintCat {
   private readonly client: AxiosInstance;
 
+  /**
+   * Creates a new OsintCat client instance
+   * 
+   * @param config - Configuration options
+   * @param config.apiKey - Your OsintCat API key (required)
+   * @param config.timeout - Request timeout in milliseconds (default: 90000)
+   * @param config.customHeaders - Custom HTTP headers to include in requests
+   * @throws {Error} If API key is missing
+   */
   constructor(config: OsintCatConfig) {
+    if (!config.apiKey) {
+      throw new Error("API key is required");
+    }
+
     this.client = axios.create({
-      baseURL: config.baseURL ?? "https://www.osintcat.net",
+      baseURL: "https://www.osintcat.net",
       timeout: config.timeout ?? 90000,
       headers: {
-        "User-Agent": "OsintCat.js/1.0.0",
+        "User-Agent": "OsintCat.js/1.1.0",
         ...config.customHeaders,
       },
     });
 
+    // Add API key to requests
     this.client.interceptors.request.use((requestConfig) => {
       if (requestConfig.url?.startsWith("/api/")) {
         requestConfig.params = {
@@ -852,116 +883,297 @@ export class OsintCat {
       return requestConfig;
     });
 
+    // Enhanced error handling
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
         if (axios.isAxiosError(error)) {
           const errorData = error.response?.data as ErrorResponseData;
-          const errorMessage = errorData?.error ?? errorData?.message ?? error.message;
+          const errorMessage = 
+            errorData?.error ?? 
+            errorData?.message ?? 
+            error.message ?? 
+            "An unknown error occurred";
           const statusCode = error.response?.status;
-          throw new OsintCatError(
-            errorMessage,
-            statusCode,
-            error.response?.data
-          );
+
+          throw new OsintCatError(errorMessage, statusCode, error.response?.data);
         }
         throw error;
       }
     );
   }
 
+  /**
+   * Generic request method with proper error handling
+   */
   private async makeRequest<T>(
     endpoint: string,
-    params?: Record<string, unknown> | object,
+    params?: Record<string, unknown>,
     customHeaders?: Record<string, string>
   ): Promise<OsintResponse<T>> {
-    const response: AxiosResponse<OsintResponse<T>> = await this.client.get(
-      endpoint,
-      {
-        params,
-        headers: customHeaders,
+    try {
+      const response: AxiosResponse<OsintResponse<T>> = await this.client.get(
+        endpoint,
+        {
+          params,
+          headers: customHeaders,
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      if (error instanceof OsintCatError) {
+        throw error;
       }
-    );
+      throw new OsintCatError(
+        error instanceof Error ? error.message : "Request failed"
+      );
+    }
+  }
+
+  /**
+   * Get current user account information and usage statistics
+   * 
+   * @returns User account information
+   * @throws {OsintCatError} If request fails
+   */
+  async getUserInfo(): Promise<UserInfo> {
+    const response: AxiosResponse<UserInfo> = await this.client.get("/api/user");
+
+    if (!response.data) {
+      throw new OsintCatError("No user data returned");
+    }
 
     return response.data;
   }
 
-  async getUserInfo(): Promise<UserInfo> {
-    const response: AxiosResponse<UserInfo> = await this.client.get("/api/user");
-
-    if (response.data) {
-      return response.data;
-    }
-    throw new OsintCatError("No user data returned");
-  }
-
-
+  /**
+   * Search multiple breach databases for compromised accounts
+   * 
+   * @param query - Email address or username to search
+   * @returns Breach results from multiple sources
+   * @throws {OsintCatError} If request fails
+   */
   async searchBreaches(query: string): Promise<OsintResponse<BreachResult>> {
-    return this.makeRequest<BreachResult>("/api/breach", { query });
+    if (!query || query.trim().length === 0) {
+      throw new OsintCatError("Query parameter cannot be empty");
+    }
+    return this.makeRequest<BreachResult>("/api/breach", { query: query.trim() });
   }
 
+  /**
+   * Get Discord user information
+   * 
+   * @param userId - Discord user ID
+   * @returns Discord user profile
+   * @throws {OsintCatError} If request fails
+   */
   async getDiscordInfo(userId: string): Promise<OsintResponse<DiscordUser>> {
-    return this.makeRequest<DiscordUser>("/api/discord", { query: userId });
+    if (!userId || userId.trim().length === 0) {
+      throw new OsintCatError("User ID cannot be empty");
+    }
+    return this.makeRequest<DiscordUser>("/api/discord", { query: userId.trim() });
   }
 
+  /**
+   * Get Roblox user profile information
+   * 
+   * @param username - Roblox username
+   * @returns Roblox profile data
+   * @throws {OsintCatError} If request fails
+   */
   async getRobloxInfo(username: string): Promise<OsintResponse<RobloxProfile>> {
-    return this.makeRequest<RobloxProfile>("/api/roblox", { query: username });
+    if (!username || username.trim().length === 0) {
+      throw new OsintCatError("Username cannot be empty");
+    }
+    return this.makeRequest<RobloxProfile>("/api/roblox", { query: username.trim() });
   }
 
+  /**
+   * Get Reddit user profile and activity
+   * 
+   * @param username - Reddit username
+   * @returns Reddit profile data
+   * @throws {OsintCatError} If request fails
+   */
   async getRedditInfo(username: string): Promise<OsintResponse<RedditProfile>> {
-    return this.makeRequest<RedditProfile>("/api/reddit", { query: username });
+    if (!username || username.trim().length === 0) {
+      throw new OsintCatError("Username cannot be empty");
+    }
+    return this.makeRequest<RedditProfile>("/api/reddit", { query: username.trim() });
   }
 
-  async discordToRoblox(discordId: string): Promise<OsintResponse<unknown>> {
-    return this.makeRequest<unknown>("/api/discord-to-roblox", { query: discordId });
-  }
-
-  async getEmailInfo(email: string): Promise<OsintResponse<EmailResult>> {
-    return this.makeRequest<EmailResult>("/api/email-osint", { query: email },
-      { "User-Agent": "Purpose: OSINT Investigation for OsintCat.js/1.0.0 Package", });
-  }
-
-  async getPhoneInfo(phone: string): Promise<OsintResponse<PhoneResult>> {
-    return this.makeRequest<PhoneResult>("/api/phone-osint", { query: phone });
-  }
-
-  async searchNPD(params: NPDSearchParams): Promise<OsintResponse<NPDResult>> {
-    return this.makeRequest<NPDResult>("/api/npd", params);
-  }
-
-  async searchDomain(domain: string): Promise<OsintResponse<DomainResult>> {
-    return this.makeRequest<DomainResult>("/api/domain", { query: domain });
-  }
-
-  async getGithubInfo(username: string): Promise<OsintResponse<GitHubProfile>> {
-    return this.makeRequest<GitHubProfile>("/api/github-osint", { query: username });
-  }
-
-  async getDiscordStalkerInfo(discordId: string): Promise<OsintResponse<DiscordStalkerResult>> {
-    return this.makeRequest<DiscordStalkerResult>("/api/discord-stalker", { query: discordId });
-  }
-
-  async getIPInfo(ip: string): Promise<OsintResponse<IPLookupResult>> {
-    return this.makeRequest<IPLookupResult>("/api/ip", { query: ip });
-  }
-
-  async resolveDNS(domain: string): Promise<OsintResponse<DNSResult>> {
-    return this.makeRequest<DNSResult>("/api/dns-resolver", { query: domain });
-  }
-
-  async searchUsername(username: string): Promise<OsintResponse<UsernameResult>> {
-    return this.makeRequest<UsernameResult>("/api/username", { query: username });
-  }
-
-  async searchChileanName(
-    name: string
-  ): Promise<OsintResponse<ChileanNameResult[]>> {
-    return this.makeRequest<ChileanNameResult[]>("/api/chilean-name", {
-      query: name,
+  /**
+   * Convert Discord ID to linked Roblox account
+   * 
+   * @param discordId - Discord user ID
+   * @returns Linked Roblox account information
+   * @throws {OsintCatError} If request fails
+   */
+  async discordToRoblox(discordId: string): Promise<OsintResponse<DiscordToRobloxResult>> {
+    if (!discordId || discordId.trim().length === 0) {
+      throw new OsintCatError("Discord ID cannot be empty");
+    }
+    return this.makeRequest<DiscordToRobloxResult>("/api/discord-to-roblox", { 
+      query: discordId.trim() 
     });
   }
 
-  async searchMinecraft(
+  /**
+   * Validate and enrich email address information
+   * 
+   * @param email - Email address to investigate
+   * @returns Email validation and metadata
+   * @throws {OsintCatError} If request fails
+   */
+  async getEmailInfo(email: string): Promise<OsintResponse<EmailResult>> {
+    if (!email || email.trim().length === 0) {
+      throw new OsintCatError("Email cannot be empty");
+    }
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      throw new OsintCatError("Invalid email format");
+    }
+    
+    return this.makeRequest<EmailResult>(
+      "/api/email-osint", 
+      { query: email.trim() },
+      { "User-Agent": "Purpose: OSINT Investigation for OsintCat.js/1.1.0 Package" }
+    );
+  }
+
+  /**
+   * Get phone number information and validation
+   * 
+   * @param phone - Phone number (international format recommended)
+   * @returns Phone number metadata and validation
+   * @throws {OsintCatError} If request fails
+   */
+  async getPhoneInfo(phone: string): Promise<OsintResponse<PhoneResult>> {
+    if (!phone || phone.trim().length === 0) {
+      throw new OsintCatError("Phone number cannot be empty");
+    }
+    return this.makeRequest<PhoneResult>("/api/phone-osint", { query: phone.trim() });
+  }
+
+  /**
+   * Search National Public Data records
+   * 
+   * @param params - Search parameters (firstName, lastName, phone, etc.)
+   * @returns NPD search results
+   * @throws {OsintCatError} If request fails or no parameters provided
+   */
+  async searchNPD(params: NPDSearchParams): Promise<OsintResponse<NPDResult>> {
+    if (!params || Object.keys(params).length === 0) {
+      throw new OsintCatError("At least one search parameter is required");
+    }
+    return this.makeRequest<NPDResult>("/api/npd", params);
+  }
+
+  /**
+   * Search domain for associated credentials and data
+   * 
+   * @param domain - Domain name to search
+   * @returns Domain-related breach data
+   * @throws {OsintCatError} If request fails
+   */
+  async searchDomain(domain: string): Promise<OsintResponse<DomainResult>> {
+    if (!domain || domain.trim().length === 0) {
+      throw new OsintCatError("Domain cannot be empty");
+    }
+    return this.makeRequest<DomainResult>("/api/domain", { query: domain.trim() });
+  }
+
+  /**
+   * Get GitHub user profile and repository information
+   * 
+   * @param username - GitHub username
+   * @returns GitHub profile data
+   * @throws {OsintCatError} If request fails
+   */
+  async getGithubInfo(username: string): Promise<OsintResponse<GitHubProfile>> {
+    if (!username || username.trim().length === 0) {
+      throw new OsintCatError("Username cannot be empty");
+    }
+    return this.makeRequest<GitHubProfile>("/api/github-osint", { query: username.trim() });
+  }
+
+  /**
+   * Get detailed Discord user activity and history
+   * 
+   * @param discordId - Discord user ID
+   * @returns Detailed Discord stalker data including messages and activity
+   * @throws {OsintCatError} If request fails
+   */
+  async getDiscordStalkerInfo(discordId: string): Promise<OsintResponse<DiscordStalkerResult>> {
+    if (!discordId || discordId.trim().length === 0) {
+      throw new OsintCatError("Discord ID cannot be empty");
+    }
+    return this.makeRequest<DiscordStalkerResult>("/api/discord-stalker", { 
+      query: discordId.trim() 
+    });
+  }
+
+  /**
+   * Get IP address geolocation and ISP information
+   * 
+   * @param ip - IP address (IPv4 or IPv6)
+   * @returns IP geolocation and metadata
+   * @throws {OsintCatError} If request fails
+   */
+  async getIPInfo(ip: string): Promise<OsintResponse<IPLookupResult>> {
+    if (!ip || ip.trim().length === 0) {
+      throw new OsintCatError("IP address cannot be empty");
+    }
+    return this.makeRequest<IPLookupResult>("/api/ip", { query: ip.trim() });
+  }
+
+  /**
+   * Resolve DNS records for a domain
+   * 
+   * @param domain - Domain name to resolve
+   * @returns DNS records (A, AAAA, MX, TXT, etc.)
+   * @throws {OsintCatError} If request fails
+   */
+  async resolveDNS(domain: string): Promise<OsintResponse<DNSResult>> {
+    if (!domain || domain.trim().length === 0) {
+      throw new OsintCatError("Domain cannot be empty");
+    }
+    return this.makeRequest<DNSResult>("/api/dns-resolver", { query: domain.trim() });
+  }
+
+  /**
+   * Search for username across multiple platforms and databases
+   * 
+   * @param username - Username to search
+   * @returns Username search results from multiple sources
+   * @throws {OsintCatError} If request fails
+   */
+  async searchUsername(username: string): Promise<OsintResponse<UsernameResult>> {
+    if (!username || username.trim().length === 0) {
+      throw new OsintCatError("Username cannot be empty");
+    }
+    return this.makeRequest<UsernameResult>("/api/username", { query: username.trim() });
+  }
+
+  /**
+   * Search Chilean national database by name
+   * 
+   * @param name - Full name to search
+   * @returns Chilean records matching the name
+   * @throws {OsintCatError} If request fails
+   */
+  async searchChileanName(name: string): Promise<OsintResponse<ChileanNameResult[]>> {
+    if (!name || name.trim().length === 0) {
+      throw new OsintCatError("Name cannot be empty");
+    }
+    return this.makeRequest<ChileanNameResult[]>("/api/chilean-name", {
+      query: name.trim(),
+    });
+  }
+
   /**
    * Search for Minecraft account breaches
    * 
