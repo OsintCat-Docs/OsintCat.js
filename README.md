@@ -34,7 +34,7 @@ pnpm add osintcat
 ## Quick Start
 
 ```js
-import OsintCat from 'osintcat';
+const OsintCat = require ('osintcat');
 
 // Initialize the client
 const client = new OsintCat({
@@ -46,7 +46,7 @@ const breaches = await client.searchBreaches('email@example.com');
 console.log(breaches.data);
 
 // Discord investigation  
-const discordData = await client.searchDiscord('username');
+const discordData = await client.getDiscordInfo('Discord_ID');
 console.log(discordData.data);
 
 // Get IP information
@@ -77,7 +77,7 @@ Search multiple breach databases for compromised accounts including:
 
 #### Discord
 ```js
-const discord = await client.searchDiscord('username');
+const discord = await client.getDiscordInfo('userId');
 ```
 
 #### Reddit  

@@ -584,17 +584,17 @@ export interface DNSResult {
   readonly A?: readonly string[];
   readonly AAAA?: readonly string[];
   readonly CNAME?: readonly string[];
-  readonly MX?: readonly { name: string; priority: number }[];
+  readonly MX?: readonly { readonly name: string; readonly priority: number }[];
   readonly NS?: readonly string[];
   readonly TXT?: readonly string[];
   readonly SOA?: readonly {
-    mname: string;
-    rname: string;
-    serial: number;
-    refresh: number;
-    retry: number;
-    expire: number;
-    minimum: number;
+    readonly mname: string;
+    readonly rname: string;
+    readonly serial: number;
+    readonly refresh: number;
+    readonly retry: number;
+    readonly expire: number;
+    readonly minimum: number;
   }[];
 }
 
@@ -867,7 +867,7 @@ export class OsintCat {
       baseURL: "https://www.osintcat.net",
       timeout: config.timeout ?? 90000,
       headers: {
-        "User-Agent": "OsintCat.js/1.1.0",
+        "User-Agent": "OsintCat.js/1.1.2",
         ...config.customHeaders,
       },
     });
@@ -1040,7 +1040,7 @@ export class OsintCat {
     return this.makeRequest<EmailResult>(
       "/api/email-osint", 
       { query: email.trim() },
-      { "User-Agent": "Purpose: OSINT Investigation for OsintCat.js/1.1.0 Package" }
+      { "User-Agent": "Purpose: OSINT Investigation for OsintCat.js/1.1.2 Package" }
     );
   }
 
@@ -1093,11 +1093,11 @@ export class OsintCat {
    * @returns GitHub profile data
    * @throws {OsintCatError} If request fails
    */
-  async getGithubInfo(username: string): Promise<OsintResponse<GitHubProfile>> {
-    if (!username || username.trim().length === 0) {
-      throw new OsintCatError("Username cannot be empty");
+  async getGithubInfo(email: string): Promise<OsintResponse<GitHubProfile>> {
+    if (!email|| email.trim().length === 0) {
+      throw new OsintCatError("Email cannot be empty");
     }
-    return this.makeRequest<GitHubProfile>("/api/github-osint", { query: username.trim() });
+    return this.makeRequest<GitHubProfile>("/api/github-osint", { query: email.trim() });
   }
 
   /**

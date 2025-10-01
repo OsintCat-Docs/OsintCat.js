@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1/1.1.2] - 2025-01-10
+
+### Testing if the Github Package and Github action works
+
+- Updated Method for Github OSINT
+- Updated Version Number
+- Added "readonly" to DNSResults
+
 ## [1.1.0] - 2025-01-10
 
 ### Added
@@ -94,7 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Release Notes
 
-### Version 1.1.0
+### Version 1.0.1
 This release focuses on improving developer experience with better documentation, type safety, and input validation. The configuration has been simplified by removing retry logic and custom baseURL support to ensure consistent API usage.
 
 ### Version 1.0.0
@@ -104,7 +112,7 @@ The initial release provides a complete SDK for the OsintCat API with full TypeS
 
 ## Upgrade Guide
 
-### From 1.0.0 to 1.1.0
+### From 1.0.0 to 1.0.1
 
 #### Breaking Change(s)
 - `baseURL` configuration option has been removed
@@ -120,7 +128,7 @@ const client = new OsintCat({
 });
 ```
 
-**After (1.1.0):**
+**After (1.0.1):**
 ```typescript
 const client = new OsintCat({
     apiKey: 'your-key',

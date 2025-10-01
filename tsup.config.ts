@@ -14,17 +14,18 @@ export default defineConfig({
   esbuildOptions(options) {
     options.banner = {
       js: `/**
- * OsintCat.js - Official OsintCat API Client
- * @version 1.1.0
- * @license MIT
- * @see [https://www.osintcat.net](https://www.osintcat.net)
- */`,
+* OsintCat.js - Official OsintCat API Client
+* @version 1.1.2
+* @license MIT
+* @see https://www.osintcat.net
+*/`,
     };
   },
   cjsInterop: true,
+  platform: 'node',
   outExtension({ format }) {
     return {
       js: format === 'cjs' ? '.cjs' : '.mjs'
-    }
+    };
   }
 });
