@@ -21,7 +21,9 @@
   "files": [
     "dist",
     "dist/**/*",
-    "README.md",
+    "README.MD",
+    "CHANGELOG.MD",
+    "CONTRIBUTING.md",
     "LICENSE"
   ],
   "scripts": {
@@ -30,7 +32,8 @@
     "test:coverage": "jest --coverage",
     "clean": "rimraf dist coverage",
     "clean:results": "rimraf results",
-    "prepublishOnly": "npm run clean && npm run build && npm test"
+    "prepublishOnly": "npm run clean && npm run build && npm test",
+    "semantic-release": "semantic-release"
   },
   "keywords": [
     "osint",
